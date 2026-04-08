@@ -387,7 +387,10 @@
     function generateReport() {
         const spt = calculateIDW(siteData.lat, siteData.lng, 'nValue') || 15;
         const fines = calculateIDW(siteData.lat, siteData.lng, 'fines') || 40;
-        const depth = siteData.stories * 10;
+        
+        // REPLACED Stories * 10 with Sowers and Sowers (1970) Formula: 3 * S^0.7
+        const depth = (3 * Math.pow(siteData.stories, 0.7)).toFixed(2);
+        
         const count = Math.ceil(siteData.len / 25) * Math.ceil(siteData.wid / 25);
         const drillCost = depth * count * 2000, sptCost = depth * count * 1000, labCost = (depth / 5) * count * 3 * 1000;
         renderReportUI(siteData.name, count, depth, spt, fines, drillCost, sptCost, labCost);
@@ -400,24 +403,28 @@
 
     function updateReportWithRoute(dist, mobCost) {
         const count = Math.ceil(siteData.len / 25) * Math.ceil(siteData.wid / 25);
-        const depth = siteData.stories * 10;
+        const stories = siteData.stories;
+        const depth = (3 * Math.pow(stories, 0.7)).toFixed(2);
         const drillCost = depth * count * 2000, sptCost = depth * count * 1000, labCost = (depth / 5) * count * 3 * 1000;
         const total = drillCost + sptCost + labCost + 30000 + mobCost;
         document.getElementById('rep-route-dist').innerText = dist.toFixed(2) + " KM";
-        document.getElementById('cost-mob').innerText = mobCost.toLocaleString();
-        document.getElementById('cost-grand').innerText = "TOTAL: PKR " + total.toLocaleString();
-        if (!isRecalling) { let hist = JSON.parse(sessionStorage.getItem('geoSessionHistory') || '[]'); hist.unshift({ ...siteData, total, date: new Date().toLocaleString() }); sessionStorage.setItem('geoSessionHistory', JSON.stringify(hist)); }
+        document.getElementById('cost-mob').innerText = Math.round(mobCost).toLocaleString();
+        document.getElementById('cost-grand').innerText = "TOTAL: PKR " + Math.round(total).toLocaleString();
+        if (!isRecalling) { let hist = JSON.parse(sessionStorage.getItem('geoSessionHistory') || '[]'); hist.unshift({ ...siteData, total, depth, date: new Date().toLocaleString() }); sessionStorage.setItem('geoSessionHistory', JSON.stringify(hist)); }
         renderHistoryUI();
     }
 
     function renderReportUI(name, count, depth, spt, fines, dc, sc, lc) {
         document.getElementById('rep-site-title').innerText = name; document.getElementById('report-content').style.display = 'block';
-        document.getElementById('rep-bh-count').innerText = count; document.getElementById('rep-depth').innerText = depth + " ft";
-        document.getElementById('rep-samples').innerText = Math.ceil(depth/5); document.getElementById('rep-spt-val').innerText = parseFloat(spt).toFixed(2);
+        document.getElementById('rep-bh-count').innerText = count; 
+        document.getElementById('rep-depth').innerText = depth + " m"; // Unit updated to meters
+        document.getElementById('rep-samples').innerText = Math.ceil(depth/1.5); // Sampling typically every 1.5m
+        document.getElementById('rep-spt-val').innerText = parseFloat(spt).toFixed(2);
         document.getElementById('rep-plan-dims').innerText = `L: ${siteData.len}m | W: ${siteData.wid}m`;
         document.getElementById('rep-test-list').innerHTML = `<b>Soil Profile:</b> ${fines > 50 ? 'Fine' : 'Coarse'}<br>Sieve, Moisture, Atterberg, UCS`;
-        document.getElementById('cost-drill').innerText = dc.toLocaleString(); document.getElementById('cost-spt').innerText = sc.toLocaleString();
-        document.getElementById('cost-lab').innerText = lc.toLocaleString();
+        document.getElementById('cost-drill').innerText = Math.round(dc).toLocaleString(); 
+        document.getElementById('cost-spt').innerText = Math.round(sc).toLocaleString();
+        document.getElementById('cost-lab').innerText = Math.round(lc).toLocaleString();
     }
 
     function drawLayoutDiagram(cols, rows) {
@@ -436,7 +443,6 @@
     async function downloadReport() {
         const btn = document.querySelector('button[onclick="downloadReport()"]');
         btn.innerText = "CAPTURING...";
-        
         document.getElementById('exp-date').innerText = "Date: " + new Date().toLocaleDateString();
         document.getElementById('exp-name').innerText = siteData.name;
         document.getElementById('exp-coords').innerText = `${siteData.lat.toFixed(5)}, ${siteData.lng.toFixed(5)}`;
@@ -448,36 +454,22 @@
         document.getElementById('exp-tests').innerText = document.getElementById('rep-test-list').innerText.split('\n')[1];
         document.getElementById('exp-total').innerText = document.getElementById('cost-grand').innerText;
         document.getElementById('exp-costs').innerHTML = `<div class="exp-data-row"><span>Drilling (${siteData.drillType}):</span> <b>PKR ${document.getElementById('cost-drill').innerText}</b></div><div class="exp-data-row"><span>Lab Tests:</span> <b>PKR ${document.getElementById('cost-lab').innerText}</b></div><div class="exp-data-row"><span>Mobilization:</span> <b>PKR ${document.getElementById('cost-mob').innerText}</b></div>`;
-        
         document.getElementById('exp-diagram-img').src = document.getElementById('layoutCanvas').toDataURL();
-        
         document.getElementById('top-menu').style.visibility = 'hidden';
         const oldZoom = map.getZoom(); map.setZoom(oldZoom); 
-
         setTimeout(async () => {
             try {
-                const mapCanvas = await html2canvas(document.getElementById('map'), { 
-                    useCORS: true, 
-                    allowTaint: true,
-                    logging: false 
-                });
+                const mapCanvas = await html2canvas(document.getElementById('map'), { useCORS: true, allowTaint: true, logging: false });
                 document.getElementById('exp-map-img').src = mapCanvas.toDataURL();
-                
                 const reportCanvas = await html2canvas(document.getElementById('export-report-container'), { scale: 2 });
-                const link = document.createElement('a'); 
-                link.download = `GeoSightReport_${siteData.name.replace(/\s+/g, '_')}.png`;
-                link.href = reportCanvas.toDataURL(); 
-                link.click();
-            } catch (e) { 
-                alert("Download failed. Map tiles are protected. Try zooming in and trying again."); 
-            } finally {
-                btn.innerText = "DOWNLOAD REPORT"; 
-                document.getElementById('top-menu').style.visibility = 'visible'; 
-            }
+                const link = document.createElement('a'); link.download = `GeoSightReport_${siteData.name.replace(/\s+/g, '_')}.png`;
+                link.href = reportCanvas.toDataURL(); link.click();
+            } catch (e) { alert("Download failed. Map tiles are protected."); }
+            finally { btn.innerText = "DOWNLOAD REPORT"; document.getElementById('top-menu').style.visibility = 'visible'; }
         }, 1000);
     }
 
-    function renderHistoryUI() { const hList = JSON.parse(sessionStorage.getItem('geoSessionHistory') || '[]'); document.getElementById('history-list').innerHTML = hList.map((h, i) => `<div class="history-card"><strong>${h.name}</strong><br>PKR ${h.total.toLocaleString()}<br><span class="view-btn" onclick="loadFromHistory(${i})">RECALL</span></div>`).join('') || "<p style='color:#a8c7c1'>Empty</p>"; }
+    function renderHistoryUI() { const hList = JSON.parse(sessionStorage.getItem('geoSessionHistory') || '[]'); document.getElementById('history-list').innerHTML = hList.map((h, i) => `<div class="history-card"><strong>${h.name}</strong><br>PKR ${Math.round(h.total).toLocaleString()}<br><span class="view-btn" onclick="loadFromHistory(${i})">RECALL</span></div>`).join('') || "<p style='color:#a8c7c1'>Empty</p>"; }
     function loadFromHistory(index) { isRecalling = true; const hList = JSON.parse(sessionStorage.getItem('geoSessionHistory') || '[]'); siteData = hList[index]; generateReport(); toggleHistory(false); }
     function toggleHistory(o) { document.getElementById('history-drawer').style.right = o ? "0px" : "-420px"; if(o) renderHistoryUI(); }
     setRandomPlaceholder();
