@@ -12,7 +12,7 @@
         #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 20, 16, 0.95); z-index: 2000; display: flex; align-items: center; justify-content: center; }
         .modal { background: #083d32; color: #e8f3f1; padding: 40px; border-radius: 12px; width: 420px; box-shadow: 0 15px 50px rgba(0,0,0,0.5); border: 1px solid #105e4d; }
         .modal h2 { color: #27ae60; margin-top: 0; font-size: 20px; letter-spacing: 1px; font-weight: 600;}
-        .modal input { width: 100%; padding: 12px 15px; margin: 10px 0; background: #052c24; border: 1px solid #105e4d; color: #e8f3f1; box-sizing: border-box; outline: none; border-radius: 6px;}
+        .modal input, .modal select { width: 100%; padding: 12px 15px; margin: 10px 0; background: #052c24; border: 1px solid #105e4d; color: #e8f3f1; box-sizing: border-box; outline: none; border-radius: 6px;}
         .modal button { width: 100%; padding: 14px; background: #e67e22; border: none; color: #ffffff; font-weight: 600; cursor: pointer; margin-top: 15px; border-radius: 6px; transition: 0.3s;}
         .modal button:hover { background: #d35400; }
         .modal .secondary-btn { background: transparent; color: #27ae60; border: 1px solid #27ae60; margin-top: 8px; }
@@ -55,7 +55,7 @@
         }
         .footer-credit a { color: #27ae60; text-decoration: none; font-weight: bold; }
 
-        /* Floating Site Logo - Restored to Original Fidelity */
+        /* Floating Site Logo */
         #geosight-logo {
             position: fixed;
             bottom: 20px;
@@ -64,8 +64,7 @@
             height: 90px;
             width: auto;
             pointer-events: none;
-            /* mix-blend-mode removed to prevent dimming on dark background */
-            /* filter removed to keep original colors/brightness */
+            filter: drop-shadow(0 2px 10px rgba(0,0,0,0.5));
         }
 
         #export-report-container { position: absolute; left: -9999px; width: 800px; background: #fff; color: #333; padding: 40px; box-sizing: border-box; }
@@ -132,12 +131,28 @@
         <h2>SITE PARAMETERS</h2>
         <label style="font-size:11px; color: #a8c7c1;">SITE NAME</label>
         <input type="text" id="input-name" placeholder="">
-        <label style="font-size:11px; color: #a8c7c1;">LENGTH (m)</label>
-        <input type="number" id="input-len" value="60">
-        <label style="font-size:11px; color: #a8c7c1;">WIDTH (m)</label>
-        <input type="number" id="input-wid" value="30">
+        
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1">
+                <label style="font-size:11px; color: #a8c7c1;">LENGTH (m)</label>
+                <input type="number" id="input-len" value="60">
+            </div>
+            <div style="flex:1">
+                <label style="font-size:11px; color: #a8c7c1;">WIDTH (m)</label>
+                <input type="number" id="input-wid" value="30">
+            </div>
+        </div>
+
         <label style="font-size:11px; color: #a8c7c1;">STORIES</label>
         <input type="number" id="input-stories" value="10">
+
+        <label style="font-size:11px; color: #a8c7c1;">TYPE OF DRILLING</label>
+        <select id="input-drill-type">
+            <option value="Rotary">Rotary</option>
+            <option value="Auger">Auger</option>
+            <option value="Percussion">Percussion</option>
+        </select>
+
         <button onclick="showLocationOptions()">CONTINUE</button>
     </div>
     <div class="modal" id="modal-location" style="display:none;">
@@ -229,7 +244,7 @@
 
 <script>
     sessionStorage.clear();
-    let siteData = { name: "", len: 0, wid: 0, stories: 0, lat: 0, lng: 0 };
+    let siteData = { name: "", len: 0, wid: 0, stories: 0, lat: 0, lng: 0, drillType: "" };
     let isSelecting = false; let isRecalling = false; let currentMarker = null; let routeLayer = null; let nearestLabName = "";
     const funSiteNames = ["Misty Ridge Development", "NUST Sector H-12 Plot B", "Centaurus Extension", "Margalla Soil Survey", "Giga Mall Fix", "Rawalpindi Flyover"];
 
@@ -318,6 +333,7 @@
         siteData.len = parseFloat(document.getElementById('input-len').value);
         siteData.wid = parseFloat(document.getElementById('input-wid').value);
         siteData.stories = parseInt(document.getElementById('input-stories').value);
+        siteData.drillType = document.getElementById('input-drill-type').value;
         if(!siteData.len || !siteData.wid || !siteData.stories) return alert("Fill parameters.");
         document.getElementById('modal-params').style.display = 'none';
         document.getElementById('modal-location').style.display = 'block';
@@ -431,12 +447,11 @@
         document.getElementById('exp-profile').innerText = document.getElementById('rep-test-list').querySelector('b').innerText;
         document.getElementById('exp-tests').innerText = document.getElementById('rep-test-list').innerText.split('\n')[1];
         document.getElementById('exp-total').innerText = document.getElementById('cost-grand').innerText;
-        document.getElementById('exp-costs').innerHTML = `<div class="exp-data-row"><span>Drilling/SPT:</span> <b>PKR ${document.getElementById('cost-drill').innerText}</b></div><div class="exp-data-row"><span>Lab Tests:</span> <b>PKR ${document.getElementById('cost-lab').innerText}</b></div><div class="exp-data-row"><span>Mobilization:</span> <b>PKR ${document.getElementById('cost-mob').innerText}</b></div>`;
+        document.getElementById('exp-costs').innerHTML = `<div class="exp-data-row"><span>Drilling (${siteData.drillType}):</span> <b>PKR ${document.getElementById('cost-drill').innerText}</b></div><div class="exp-data-row"><span>Lab Tests:</span> <b>PKR ${document.getElementById('cost-lab').innerText}</b></div><div class="exp-data-row"><span>Mobilization:</span> <b>PKR ${document.getElementById('cost-mob').innerText}</b></div>`;
         
         document.getElementById('exp-diagram-img').src = document.getElementById('layoutCanvas').toDataURL();
         
         document.getElementById('top-menu').style.visibility = 'hidden';
-
         const oldZoom = map.getZoom(); map.setZoom(oldZoom); 
 
         setTimeout(async () => {
@@ -454,7 +469,7 @@
                 link.href = reportCanvas.toDataURL(); 
                 link.click();
             } catch (e) { 
-                alert("Download failed. Map tiles are protected."); 
+                alert("Download failed. Map tiles are protected. Try zooming in and trying again."); 
             } finally {
                 btn.innerText = "DOWNLOAD REPORT"; 
                 document.getElementById('top-menu').style.visibility = 'visible'; 
@@ -468,4 +483,4 @@
     setRandomPlaceholder();
 </script>
 </body>
-</html>
+    </html>
