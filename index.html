@@ -1427,7 +1427,7 @@
 
     const map = L.map('map', {zoomControl: false}).setView([33.56, 73.15], 11);
     L.control.zoom({position: 'bottomright'}).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO', crossOrigin: 'anonymous' }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=cb1_3lf4_1_b4a24fba8bd97d712420ce1a', { attribution: '&copy; CARTO', crossOrigin: 'anonymous' }).addTo(map);
 
     const bhLayerGroup = L.layerGroup().addTo(map);
     boreholes.forEach(bh => {
